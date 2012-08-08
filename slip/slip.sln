@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "slip", "slip.vcproj", "{12566AD2-181B-429E-A68F-C82DCFF2CDA9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "..\test\test.vcproj", "{F11AFF07-A8C8-46B5-A56B-ED34AFCFDC61}"
+	ProjectSection(ProjectDependencies) = postProject
+		{12566AD2-181B-429E-A68F-C82DCFF2CDA9} = {12566AD2-181B-429E-A68F-C82DCFF2CDA9}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{12566AD2-181B-429E-A68F-C82DCFF2CDA9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{12566AD2-181B-429E-A68F-C82DCFF2CDA9}.Debug|Win32.Build.0 = Debug|Win32
+		{12566AD2-181B-429E-A68F-C82DCFF2CDA9}.Release|Win32.ActiveCfg = Release|Win32
+		{12566AD2-181B-429E-A68F-C82DCFF2CDA9}.Release|Win32.Build.0 = Release|Win32
+		{F11AFF07-A8C8-46B5-A56B-ED34AFCFDC61}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F11AFF07-A8C8-46B5-A56B-ED34AFCFDC61}.Debug|Win32.Build.0 = Debug|Win32
+		{F11AFF07-A8C8-46B5-A56B-ED34AFCFDC61}.Release|Win32.ActiveCfg = Release|Win32
+		{F11AFF07-A8C8-46B5-A56B-ED34AFCFDC61}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

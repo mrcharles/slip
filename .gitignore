@@ -1,0 +1,11 @@
+*.suo
+obj/
+bin/
+*.user
+*.cache
+*.cachefile
+*.sdf
+*.opensdf
+Debug/
+ipch/
+*.ncb
