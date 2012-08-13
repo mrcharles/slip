@@ -2,6 +2,7 @@
 //
 
 #include "stdafx.h"
+
 #include "..\slip\slip.h"
 #include "time.h"
 
@@ -32,6 +33,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	slip::end(SLIP_TestTag2);
 
+	slip::checkpoint();
 	slip::disable();
 	return 0;
 }

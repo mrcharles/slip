@@ -9,3 +9,7 @@ bin/
 Debug/
 ipch/
 *.ncb
+Win32Release/
+Win32Debug/
+x64Release/
+x64Debug/

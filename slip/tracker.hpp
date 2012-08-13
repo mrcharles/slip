@@ -1,14 +1,21 @@
 #ifndef SLIP_TRACKER_HPP
 #define SLIP_TRACKER_HPP
 
+#define WIN32_LEAN_AND_MEAN 
 #include <windows.h>
 #include <string>
 #include <map>
 #include <stack>
-#include <vector>
 #include <assert.h>
 
 namespace slip {
+
+	LARGE_INTEGER perffreq;
+	inline double microseconds(const LARGE_INTEGER &i)
+	{
+		return (double)( i.QuadPart * 1000000 / perffreq.QuadPart );
+	}
+
 
 	class tracker
 	{
@@ -18,6 +25,63 @@ namespace slip {
 			sliptag tag;
 			unsigned int count;
 			LARGE_INTEGER time;
+
+			double mintime;
+			double maxtime;
+
+			unsigned int totalcount;
+			double totalmintime;
+			double totalmaxtime;
+
+			double totaltime;
+
+			taginfo()
+			{
+				tag = 0;
+				count = 0;
+
+				time.QuadPart = 0;
+
+				mintime = 1000000000.0;
+				maxtime = 0;
+
+				totalcount = 0;
+				totalmintime = 1000000000.0;
+				totalmaxtime = 0;
+				totaltime = 0;
+
+			}
+
+			void addtime( LARGE_INTEGER idelta, double delta )
+			{
+				time.QuadPart += idelta.QuadPart;
+
+				if( delta > maxtime )
+					maxtime = delta;
+				if( delta < mintime )
+					mintime = delta;
+
+				count++;
+			}
+
+			void checkpoint()
+			{
+				double ms = microseconds(time);
+
+				totaltime += ms;
+
+				if(mintime < totalmintime)
+					totalmintime = mintime;
+				if(maxtime > totalmaxtime)
+					totalmaxtime = maxtime;
+				totalcount += count;
+
+				time.QuadPart = 0;
+				count = 0;
+				mintime = 1000000000.0;
+				maxtime = 0;
+			}
+
 		};
 
 		struct activetag
@@ -32,6 +96,16 @@ namespace slip {
 			taginfo info;
 			std::map<sliptag, calltree> children;
 
+			void checkpoint()
+			{
+				info.checkpoint();
+
+				for( std::map<sliptag, calltree>::iterator it = children.begin(); it != children.end(); ++it )
+				{
+					((*it).second).checkpoint();
+				}
+			}
+
 		};
 
 		unsigned int m_tagcount;
@@ -42,6 +116,7 @@ namespace slip {
 		calltree tree;
 		std::stack<calltree*> treeposition;
 		bool enabled;
+		bool firstupdate;
 
 		void pushtree(sliptag tag)
 		{
@@ -56,11 +131,10 @@ namespace slip {
 				}
 			}
 
+
 			//if we get here we need to add a map entry
 			calltree newtree;
 			newtree.info.tag = tag;
-			newtree.info.count = 0;
-			newtree.info.time.QuadPart = 0;
 
 			root->children[tag] = newtree;
 			treeposition.push(&(root->children[tag]));
@@ -79,7 +153,9 @@ namespace slip {
 			info = NULL;
 			m_tagcount = 0;
 			treeposition.push(&tree);
+			QueryPerformanceFrequency(&perffreq);
 		}
+
 
 		sliptag maketag( const std::string& name )
 		{
@@ -95,6 +171,8 @@ namespace slip {
 
 		void begin(sliptag tag)
 		{
+			if(!enabled) return;
+
 			activetag newtag;
 			newtag.tag = tag;
 			
@@ -105,6 +183,7 @@ namespace slip {
 
 		void end(sliptag tag)
 		{
+			if(!enabled) return;
 			LARGE_INTEGER end;
 			QueryPerformanceCounter(&end);
 
@@ -116,11 +195,17 @@ namespace slip {
 
 			calltree *tree = treeposition.top();
 
-			tree->info.count++;
-			tree->info.time.QuadPart += (end.QuadPart - top.start.QuadPart);
+			LARGE_INTEGER idelta;
+			idelta.QuadPart = end.QuadPart - top.start.QuadPart;
 
-			info[tag].count++;
-			info[tag].time.QuadPart += (end.QuadPart - top.start.QuadPart);
+			double time = microseconds(idelta);
+
+			if( !firstupdate )
+			{
+				tree->info.addtime( idelta, time );
+
+				info[tag].addtime(idelta, time);
+			}
 
 			poptree();
 		}
@@ -130,14 +215,25 @@ namespace slip {
 			enabled = true;
 			if( info == NULL )
 			{
-				int size = tagnames.size();
+				size_t size = tagnames.size();
 				info = new taginfo[	size ];
-				memset(info, 0, sizeof(taginfo) * size);
+				//memset(info, 0, sizeof(taginfo) * size);
 			}
+			firstupdate = true;
 		}
 
 		void checkpoint()
 		{
+			if(!enabled) return;
+			if(firstupdate)
+			{
+				firstupdate = false;
+				return;
+			}
+			for(int i = 0; i < m_tagcount; i++ )
+				info[i].checkpoint();
+
+			tree.checkpoint();
 		
 		}
 
@@ -150,8 +246,6 @@ namespace slip {
 
 		void report()
 		{
-			LARGE_INTEGER perffreq;
-			QueryPerformanceFrequency(&perffreq);
 
 			std::map<sliptag, std::string> names;
 
@@ -162,10 +256,10 @@ namespace slip {
 
 				names[tag] = name;
 
-				double time = (double)( info[tag].time.QuadPart * 1000000 / perffreq.QuadPart );
+				double time = microseconds(info[tag].time);
 
 				char str[1024];
-				sprintf_s(str, 1024, "%s (id: %d): took %fms for %d calls\n", name.c_str(), tag, time / 1000.0, info[tag].count);	 
+				sprintf_s(str, 1024, "%s (id: %d): took %fms for %d calls (%fms avg, %fms min, %fms max)\n", name.c_str(), tag, info[tag].totaltime / 1000.0, info[tag].totalcount, info[tag].totaltime / 1000.0 / info[tag].totalcount, info[tag].totalmintime / 1000.0, info[tag].totalmaxtime / 1000.0);	 
 
 				OutputDebugStringA(str);
 
@@ -192,7 +286,7 @@ private:
 					tabstr++;
 				}
 
-				sprintf_s(tabstr, 1024-depth, "%s (id: %d): took %fms for %d calls\n", names[root.info.tag].c_str(), root.info.tag, time / 1000.0, root.info.count);	 
+				sprintf_s(tabstr, 1024-depth, "%s (id: %d): took %fms for %d calls (%fms avg, %fms min, %fms max)\n", names[root.info.tag].c_str(), root.info.tag, root.info.totaltime / 1000.0, root.info.totalcount, root.info.totaltime / 1000.0 / root.info.totalcount, root.info.totalmintime / 1000.0, root.info.totalmaxtime / 1000.0);	 
 
 				OutputDebugStringA(str);
 			}

@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#define _SLIP_ENABLE_
+
 #include "slip.h"
 #include "tracker.hpp"
 
